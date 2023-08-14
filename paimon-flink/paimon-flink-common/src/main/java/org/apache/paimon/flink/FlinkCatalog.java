@@ -18,6 +18,7 @@
 
 package org.apache.paimon.flink;
 
+import org.apache.paimon.CoreOptions;
 import org.apache.paimon.catalog.Catalog;
 import org.apache.paimon.catalog.Identifier;
 import org.apache.paimon.options.Options;
@@ -221,6 +222,18 @@ public class FlinkCatalog extends AbstractCatalog {
         } else {
             return new SystemCatalogTable(table);
         }
+    }
+
+    public CatalogBaseTable getTable(ObjectPath tablePath, long timestamp)
+            throws TableNotExistException, CatalogException {
+        // Due to Paimon's Catalog not providing an interface for historical Schema,
+        //  we can only obtain the latest Schema at present.
+        CatalogTable catalogTable = this.getTable(tablePath);
+
+        // Attach the specified consumption time parameter.
+        Options option = new Options().set(CoreOptions.SCAN_TIMESTAMP_MILLIS, timestamp);
+
+        return catalogTable.copy(option.toMap());
     }
 
     @Override
