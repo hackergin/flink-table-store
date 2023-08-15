@@ -42,8 +42,16 @@ public class CompactAction extends TableActionBase {
 
     private List<Map<String, String>> partitions;
 
+    private StreamExecutionEnvironment env;
+
     public CompactAction(String warehouse, String database, String tableName) {
         this(warehouse, database, tableName, Collections.emptyMap());
+    }
+
+    public CompactAction(
+            StreamExecutionEnvironment env, String warehouse, String database, String tableName) {
+        this(warehouse, database, tableName, Collections.emptyMap());
+        this.env = env;
     }
 
     public CompactAction(
@@ -115,7 +123,8 @@ public class CompactAction extends TableActionBase {
 
     @Override
     public void run() throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        StreamExecutionEnvironment env =
+                this.env != null ? this.env : StreamExecutionEnvironment.getExecutionEnvironment();
         build(env);
         execute(env, "Compact job");
     }

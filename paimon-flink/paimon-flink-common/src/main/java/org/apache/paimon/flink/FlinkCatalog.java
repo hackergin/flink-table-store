@@ -20,6 +20,7 @@ package org.apache.paimon.flink;
 
 import org.apache.paimon.catalog.Catalog;
 import org.apache.paimon.catalog.Identifier;
+import org.apache.paimon.flink.procedure.CompactProcedure;
 import org.apache.paimon.options.Options;
 import org.apache.paimon.schema.Schema;
 import org.apache.paimon.schema.SchemaChange;
@@ -61,6 +62,7 @@ import org.apache.flink.table.catalog.exceptions.DatabaseNotEmptyException;
 import org.apache.flink.table.catalog.exceptions.DatabaseNotExistException;
 import org.apache.flink.table.catalog.exceptions.FunctionNotExistException;
 import org.apache.flink.table.catalog.exceptions.PartitionNotExistException;
+import org.apache.flink.table.catalog.exceptions.ProcedureNotExistException;
 import org.apache.flink.table.catalog.exceptions.TableAlreadyExistException;
 import org.apache.flink.table.catalog.exceptions.TableNotExistException;
 import org.apache.flink.table.catalog.stats.CatalogColumnStatistics;
@@ -68,6 +70,7 @@ import org.apache.flink.table.catalog.stats.CatalogTableStatistics;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.expressions.Expression;
 import org.apache.flink.table.factories.Factory;
+import org.apache.flink.table.procedures.Procedure;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 
@@ -113,6 +116,8 @@ public class FlinkCatalog extends AbstractCatalog {
 
     private final Duration logStoreAutoRegisterTimeout;
 
+    private static final String SYSTEM_DATABSE = "system";
+
     private final Options options;
 
     public FlinkCatalog(
@@ -144,12 +149,15 @@ public class FlinkCatalog extends AbstractCatalog {
 
     @Override
     public List<String> listDatabases() throws CatalogException {
-        return catalog.listDatabases();
+        List<String> databases = new ArrayList<>();
+        databases.addAll(catalog.listDatabases());
+        databases.add(SYSTEM_DATABSE);
+        return databases;
     }
 
     @Override
     public boolean databaseExists(String databaseName) throws CatalogException {
-        return catalog.databaseExists(databaseName);
+        return catalog.databaseExists(databaseName) || databaseName.equals(SYSTEM_DATABSE);
     }
 
     @Override
@@ -193,6 +201,29 @@ public class FlinkCatalog extends AbstractCatalog {
             throw new DatabaseNotEmptyException(getName(), e.database());
         } catch (Catalog.DatabaseNotExistException e) {
             throw new DatabaseNotExistException(getName(), e.database());
+        }
+    }
+
+    private static final Map<ObjectPath, Procedure> PROCEDURE_MAP = new HashMap();
+
+    static {
+        PROCEDURE_MAP.put(ObjectPath.fromString("system.compact"), new CompactProcedure());
+    }
+
+    public List<String> listProcedures(String dbName)
+            throws DatabaseNotExistException, CatalogException {
+        return PROCEDURE_MAP.keySet().stream()
+                .filter(procedurePath -> procedurePath.getDatabaseName().equals(dbName))
+                .map(ObjectPath::getObjectName)
+                .collect(Collectors.toList());
+    }
+
+    public Procedure getProcedure(ObjectPath procedurePath)
+            throws ProcedureNotExistException, CatalogException {
+        if (PROCEDURE_MAP.containsKey(procedurePath)) {
+            return PROCEDURE_MAP.get(procedurePath);
+        } else {
+            throw new ProcedureNotExistException(getName(), procedurePath);
         }
     }
 

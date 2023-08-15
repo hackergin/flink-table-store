@@ -19,6 +19,7 @@
 package org.apache.paimon.flink.action;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.data.GenericRowData;
 import org.apache.flink.table.data.RowData;
@@ -46,6 +47,18 @@ public class DeleteAction extends TableActionBase {
             String filter,
             Map<String, String> catalogConfig) {
         super(warehouse, databaseName, tableName, catalogConfig);
+        changeIgnoreMergeEngine();
+        this.filter = filter;
+    }
+
+    public DeleteAction(
+            StreamExecutionEnvironment environment,
+            String warehouse,
+            String databaseName,
+            String tableName,
+            String filter,
+            Map<String, String> catalogConfig) {
+        super(environment, warehouse, databaseName, tableName, catalogConfig);
         changeIgnoreMergeEngine();
         this.filter = filter;
     }

@@ -62,8 +62,22 @@ public abstract class TableActionBase extends ActionBase {
             String databaseName,
             String tableName,
             Map<String, String> catalogConfig) {
+        this(
+                StreamExecutionEnvironment.getExecutionEnvironment(),
+                warehouse,
+                databaseName,
+                tableName,
+                catalogConfig);
+    }
+
+    TableActionBase(
+            StreamExecutionEnvironment env,
+            String warehouse,
+            String databaseName,
+            String tableName,
+            Map<String, String> catalogConfig) {
         super(warehouse, catalogConfig);
-        env = StreamExecutionEnvironment.getExecutionEnvironment();
+        this.env = env;
         batchTEnv = StreamTableEnvironment.create(env, EnvironmentSettings.inBatchMode());
 
         // register flink catalog to table environment
